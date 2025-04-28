@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Employee Info</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      const user = JSON.parse(localStorage.getItem('loggedInUser'));
+      if (!user) {
+        alert('Please login first.');
+        window.location.href = '/login';
+      }
+      tailwind.config = {
+        theme: {
+          extend: {
+            colors: {
+              primary: '#0F62FE',
+              secondary: '#3D3D3D',
+              accent: '#A6C8FF',
+              background: '#212121',
+              card: '#2F2F2F'
+            },
+            fontFamily: {
+              sans: ['Inter', 'sans-serif']
+            }
+          }
+        }
+      }
+    </script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+  </head>
+  <body class="bg-background min-h-screen text-white font-sans flex flex-col items-center justify-center p-4 md:p-6">
+    <!-- Your full same HTML till here -->
+    <div class="w-full max-w-3xl bg-card p-8 rounded-xl shadow-2xl relative overflow-hidden">
+      <div class="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-primary to-accent"></div>
+      <h1 class="text-4xl font-bold mb-8 text-center text-white">Employee Profile</h1>
+      <div class="flex justify-center mb-8">
+        <div class="relative">
+          <img id="displayAvatar" src="https://i.pravatar.cc/150" alt="Profile Avatar" class="w-40 h-40 rounded-full object-cover border-4 border-primary shadow-lg">
+        </div>
+      </div>
+      <div id="profileSection" class="space-y-8 px-4">
+        <div>
+          <h3 class="text-sm font-medium text-gray-400 mb-2">Name</h3>
+          <p id="displayName" class="text-white text-xl font-semibold">John Doe</p>
+        </div>
+        <div>
+          <h3 class="text-sm font-medium text-gray-400 mb-2">Bio</h3>
+          <p id="displayBio" class="text-white text-base leading-relaxed">Developer Bio Here</p>
+        </div>
+        <div>
+          <h3 class="text-sm font-medium text-gray-400 mb-2">Skills</h3>
+          <div id="displaySkills" class="flex flex-wrap gap-2 mt-2"></div>
+        </div>
+        <button id="editProfileBtn" class="w-full bg-primary py-4 rounded-lg mt-8 text-white text-lg font-medium hover:bg-[#0D56E0] transition-colors shadow-md">Edit Profile</button>
+      </div>
+    </div>
+    <!-- Edit Modal (Same, no changes needed visually) -->
+    <div id="editModal" class="hidden fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50 p-4">
+      <div class="bg-card p-8 rounded-xl w-full max-w-3xl relative overflow-hidden max-h-[90vh] overflow-y-auto">
+        <div class="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-primary to-accent"></div>
+        <div class="flex justify-between items-center mb-6">
+          <h2 class="text-2xl font-semibold text-white">Edit Profile</h2>
+          <button id="closeEditModal" class="text-gray-400 hover:text-white text-2xl">&times;</button>
+        </div>
+        <div class="flex flex-col items-center mb-8">
+          <div class="relative mb-6">
+            <img id="avatarPreview" src="https://i.pravatar.cc/150" alt="Avatar Preview" class="w-40 h-40 rounded-full object-cover border-4 border-primary shadow-lg">
+          </div>
+          <div class="w-full">
+            <label for="avatarUrl" class="block text-sm font-medium mb-2 text-white">Photo URL</label>
+            <input id="avatarUrl" type="text" class="w-full p-3 rounded-md bg-[#1E1E1E] border border-[#3A3A3A] text-white focus:border-primary focus:outline-none" value="https://i.pravatar.cc/150" placeholder="Enter image URL">
+          </div>
+        </div>
+        <div class="space-y-6">
+          <div>
+            <label for="editName" class="block text-sm font-medium mb-2 text-white">Name</label>
+            <input id="editName" type="text" class="w-full p-3 rounded-md bg-[#1E1E1E] border border-[#3A3A3A] text-white focus:border-primary focus:outline-none">
+          </div>
+          <div>
+            <label for="editBio" class="block text-sm font-medium mb-2 text-white">Bio</label>
+            <textarea id="editBio" rows="4" class="w-full p-3 rounded-md bg-[#1E1E1E] border border-[#3A3A3A] text-white focus:border-primary focus:outline-none"></textarea>
+          </div>
+          <div>
+            <div class="flex justify-between items-center mb-2">
+              <label class="text-sm font-medium text-white">Skills</label>
+              <button id="addSkillBtn" class="bg-primary px-4 py-2 rounded-md text-sm text-white hover:bg-[#0D56E0] transition-colors">+ Add Skill</button>
+            </div>
+            <div id="editSkillsList" class="flex flex-wrap gap-2 min-h-10 p-3 border border-[#3A3A3A] rounded-md bg-[#1E1E1E]"></div>
+          </div>
+          <button id="saveProfileBtn" class="w-full bg-primary py-4 rounded-lg mt-8 text-white text-lg font-medium hover:bg-[#0D56E0] transition-colors shadow-md">Save Profile</button>
+        </div>
+      </div>
+    </div>
+    <!-- Skill Modal (Same visually) -->
+    <div id="skillModal" class="hidden fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50">
+      <div class="bg-card p-6 rounded-xl w-96 relative overflow-hidden shadow-2xl">
+        <div class="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-primary to-accent"></div>
+        <h2 class="text-xl font-semibold mb-6 text-white">Add Skill</h2>
+        <input id="newSkillInput" type="text" class="w-full p-3 rounded-md bg-[#1E1E1E] border border-[#3A3A3A] text-white focus:border-primary focus:outline-none mb-6" placeholder="Skill name">
+        <div class="flex justify-end gap-3">
+          <button id="cancelSkillBtn" class="px-5 py-2.5 bg-[#3A3A3A] rounded-md text-white hover:bg-[#4A4A4A] transition-colors">Cancel</button>
+          <button id="confirmSkillBtn" class="px-5 py-2.5 bg-primary rounded-md text-white hover:bg-[#0D56E0] transition-colors">Add</button>
+        </div>
+      </div>
+    </div>
+    <!-- 🔥 JS to Handle Local Storage and Edit -->
+    <script>
+      user = JSON.parse(localStorage.getItem('loggedInUser'));
+      if (user) {
+        document.getElementById('displayName').textContent = user.name;
+        document.getElementById('displayBio').textContent = user.bio;
+        const skillsContainer = document.getElementById('displaySkills');
+        skillsContainer.innerHTML = '';
+        user.skills.forEach(skill => {
+          const span = document.createElement('span');
+          span.className = 'bg-[#1E1E1E] px-4 py-2 rounded-md text-sm text-white border border-[#3A3A3A]';
+          span.textContent = skill;
+          skillsContainer.appendChild(span);
+        });
+      }
+      // Elements
+      const editProfileBtn = document.getElementById('editProfileBtn');
+      const closeEditModal = document.getElementById('closeEditModal');
+      const saveProfileBtn = document.getElementById('saveProfileBtn');
+      const editName = document.getElementById('editName');
+      const editBio = document.getElementById('editBio');
+      const editSkillsList = document.getElementById('editSkillsList');
+      const addSkillBtn = document.getElementById('addSkillBtn');
+      const skillModal = document.getElementById('skillModal');
+      const newSkillInput = document.getElementById('newSkillInput');
+      const cancelSkillBtn = document.getElementById('cancelSkillBtn');
+      const confirmSkillBtn = document.getElementById('confirmSkillBtn');
+      // Edit open
+      editProfileBtn.addEventListener('click', () => {
+        editName.value = user.name;
+        editBio.value = user.bio;
+        editSkillsList.innerHTML = '';
+        user.skills.forEach(skill => {
+          const skillBadge = createSkillBadge(skill);
+          editSkillsList.appendChild(skillBadge);
+        });
+        document.getElementById('editModal').classList.remove('hidden');
+      });
+      closeEditModal.addEventListener('click', () => {
+        document.getElementById('editModal').classList.add('hidden');
+      });
+      // Save edit
+      saveProfileBtn.addEventListener('click', () => {
+        user.name = editName.value.trim();
+        user.bio = editBio.value.trim();
+        user.skills = Array.from(editSkillsList.children).map(div => div.firstChild.textContent);
+        localStorage.setItem('loggedInUser', JSON.stringify(user));
+        location.reload(); // simple reload to update
+      });
+      // Add Skill
+      addSkillBtn.addEventListener('click', () => {
+        skillModal.classList.remove('hidden');
+      });
+      cancelSkillBtn.addEventListener('click', () => {
+        skillModal.classList.add('hidden');
+      });
+      confirmSkillBtn.addEventListener('click', () => {
+        const newSkill = newSkillInput.value.trim();
+        if (newSkill) {
+          const skillBadge = createSkillBadge(newSkill);
+          editSkillsList.appendChild(skillBadge);
+        }
+        newSkillInput.value = '';
+        skillModal.classList.add('hidden');
+      });
+
+      function createSkillBadge(text) {
+        const badge = document.createElement('div');
+        badge.className = 'bg-[#2A2A2A] px-3 py-1.5 rounded-md text-sm text-white flex items-center gap-2 border border-[#3A3A3A]';
+        const span = document.createElement('span');
+        span.textContent = text;
+        const remove = document.createElement('span');
+        remove.innerHTML = '&times;';
+        remove.className = 'text-white cursor-pointer hover:text-red-400';
+        remove.addEventListener('click', () => badge.remove());
+        badge.appendChild(span);
+        badge.appendChild(remove);
+        return badge;
+      }
+    </script>
+  </body>
+</html>

@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login to Dashboard</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+        font-family: 'Inter', sans-serif;
+      }
+
+      body {
+        background-color: #212121;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        min-height: 100vh;
+      }
+
+      h3 {
+        color: #ffffff;
+      }
+
+      .login-container {
+        background-color: #2f2f2f;
+        border-radius: 12px;
+        width: 100%;
+        max-width: 420px;
+        padding: 40px;
+        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+        position: relative;
+        overflow: hidden;
+      }
+
+      .login-container::before {
+        content: "";
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 8px;
+        background: linear-gradient(90deg, #0F62FE, #A6C8FF);
+      }
+
+      .login-header {
+        margin-bottom: 30px;
+        text-align: center;
+      }
+
+      .login-header h1 {
+        color: #ffffff;
+        font-size: 32px;
+        font-weight: 600;
+        margin-bottom: 5px;
+      }
+
+      .login-header p {
+        color: #a0a0a0;
+        font-size: 16px;
+      }
+
+      .input-group {
+        margin-bottom: 24px;
+        position: relative;
+      }
+
+      .input-group label {
+        display: block;
+        color: #ffffff;
+        font-size: 14px;
+        margin-bottom: 8px;
+        font-weight: 500;
+      }
+
+      .input-group input {
+        width: 100%;
+        padding: 15px;
+        border: 1px solid #3a3a3a;
+        border-radius: 8px;
+        background-color: #1e1e1e;
+        color: #ffffff;
+        font-size: 16px;
+        transition: all 0.3s ease;
+      }
+
+      .input-group input:focus {
+        border-color: #0F62FE;
+        outline: none;
+        box-shadow: 0 0 0 3px rgba(15, 98, 254, 0.2);
+      }
+
+      .input-group input::placeholder {
+        color: #6a6a6a;
+      }
+
+      .forgot-password {
+        text-align: right;
+        margin-bottom: 20px;
+      }
+
+      .forgot-password a {
+        color: #0F62FE;
+        font-size: 14px;
+        text-decoration: none;
+        transition: color 0.3s ease;
+      }
+
+      .forgot-password a:hover {
+        color: #A6C8FF;
+        text-decoration: underline;
+      }
+
+      .login-button {
+        width: 100%;
+        padding: 16px;
+        border: none;
+        border-radius: 8px;
+        background-color: #0F62FE;
+        color: #ffffff;
+        font-size: 16px;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.3s ease;
+      }
+
+      .login-button:hover {
+        background-color: #0D56E0;
+        box-shadow: 0 4px 10px rgba(15, 98, 254, 0.3);
+      }
+
+      .login-button:active {
+        transform: translateY(1px);
+      }
+
+      .signup-link {
+        margin-top: 30px;
+        text-align: center;
+      }
+
+      .signup-link p {
+        color: #a0a0a0;
+        font-size: 14px;
+      }
+
+      .signup-link a {
+        color: #0F62FE;
+        font-weight: 500;
+        text-decoration: none;
+        margin-left: 5px;
+        transition: color 0.3s ease;
+      }
+
+      .signup-link a:hover {
+        color: #A6C8FF;
+        text-decoration: underline;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="login-container">
+      <div class="login-header">
+        <h3>Login to your Account</h3>
+      </div>
+      <form id="loginForm">
+        <div class="input-group">
+          <label for="username">Username</label>
+          <input type="text" id="username" name="username" placeholder="Enter your username" required>
+        </div>
+        <div class="input-group">
+          <label for="password">Password</label>
+          <input type="password" id="password" name="password" placeholder="Enter your password" required>
+        </div>
+        <div class="forgot-password">
+          <a href="#">Forgot password?</a>
+        </div>
+        <button type="submit" class="login-button">Log In</button>
+      </form>
+    </div>
+    <script>
+      document.getElementById('loginForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const usernameInput = document.getElementById('username').value.trim();
+        const passwordInput = document.getElementById('password').value.trim();
+        try {
+          const response = await fetch('/static/employees4.csv');
+          const csvText = await response.text();
+          const parsed = Papa.parse(csvText, {
+            header: true,
+            skipEmptyLines: true,
+            dynamicTyping: false,
+            quoteChar: '"',
+          });
+          const users = parsed.data;
+          const matchedUser = users.find(user => user.Username?.trim() === usernameInput && user.Password?.trim() === passwordInput);
+          if (matchedUser) {
+            const userProfile = {
+              username: matchedUser.Username?.trim(),
+              name: matchedUser.Name?.trim(),
+              bio: matchedUser.Bio?.trim(),
+              skills: (matchedUser.Skill || '').split(',').map(skill => skill.trim()),
+              billability: matchedUser["Billability Hours"]?.trim(),
+              manager: matchedUser.Manager?.trim() || ""
+            };
+            localStorage.setItem('loggedInUser', JSON.stringify(userProfile));
+            alert('Login Successful! Welcome ' + matchedUser.Name);
+            if (!userProfile.manager) {
+              window.location.href = '/manager'; // Manager Dashboard
+            } else {
+              window.location.href = '/employee'; // Employee Dashboard
+            }
+          } else {
+            alert('Invalid Username or Password.');
+          }
+        } catch (error) {
+          console.error('Error parsing CSV:', error);
+          alert('Failed to load user data.');
+        }
+      });
+    </script>
+  </body>
+</html>
