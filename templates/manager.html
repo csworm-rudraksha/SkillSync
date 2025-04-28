@@ -1,261 +1,187 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>AI Dashboard</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-      const user = JSON.parse(localStorage.getItem('loggedInUser'));
-      if (!user) {
-        alert('Please login first.');
-        window.location.href = '/login';
-      }
-      tailwind.config = {
-        theme: {
-          extend: {
-            colors: {
-              primary: '#0F62FE',
-              secondary: '#CCCCCC',
-              accent: '#A6C8FF',
-              // background: 'black',
-              background: 'black',
-              card: '#1A1A1A'
-            },
-            fontFamily: {
-              sans: ['Inter', 'sans-serif']
-            }
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AI Dashboard</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+  <script>
+    const user = JSON.parse(localStorage.getItem('loggedInUser'));
+    if (!user) {
+      alert('Please login first.');
+      window.location.href = '/login';
+    }
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            primary: '#0F62FE',
+            secondary: '#CCCCCC',
+            accent: '#A6C8FF',
+            background: '#0D1117',
+            card: '#161B22'
+          },
+          fontFamily: {
+            sans: ['Inter', 'sans-serif']
           }
         }
       }
-    </script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="style.css">
-    <style>
-      /* Hide scrollbar but allow scroll */
-      #activeEmployees::-webkit-scrollbar,
-      #benchEmployees::-webkit-scrollbar {
-        width: 0px;
-        height: 0px;
-      }
+    };
+  </script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/style.css">
+</head>
 
-      #activeEmployees,
-      #benchEmployees {
-        scrollbar-width: none;
-        /* Firefox */
-        -ms-overflow-style: none;
-        /* IE and Edge */
-      }
-    </style>
-  </head>
-  <body class="bg-background text-secondary font-sans">
-    <div class="flex flex-col min-h-screen">
-      <div class="flex flex-1">
-        <!-- Sidebar -->
-        <aside class="w-64 bg-card border-r border-gray-700 hidden md:block">
-          <div class="p-6 text-xl font-bold text-primary border-b border-gray-700">Dashboard</div>
-          <nav class="mt-6 px-6 space-y-4">
-            <a href="#" class="block text-sm font-medium hover:text-primary">Overview</a>
-            <a href="#" class="block text-sm hover:text-primary">Projects</a>
-            <a href="#" class="block text-sm hover:text-primary">Team</a>
-            <a href="#" class="block text-sm hover:text-primary">Settings</a>
-          </nav>
-        </aside>
-        <!-- Main Content -->
-        <main class="flex-1 p-6 flex flex-col">
-          <header class="flex justify-between items-center mb-8">
-            <h1 class="text-2xl font-semibold text-white">AI Employee Allocation</h1>
-            <input type="text" placeholder="Search employees..." class="bg-card border border-gray-700 px-4 py-2 rounded-md w-64 text-sm text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary" />
-          </header>
-          <!-- Employee Sections -->
-          <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-10">
-            <div>
-              <h2 class="text-lg font-semibold mb-4 text-white">Active Employees</h2>
-              <div id="activeEmployees" class="space-y-3 max-h-[600px] overflow-y-auto pr-2"></div>
-            </div>
-            <div>
-              <h2 class="text-lg font-semibold mb-4 text-white">Employees on Bench</h2>
-              <div id="benchEmployees" class="space-y-3 max-h-[600px] overflow-y-auto pr-2"></div>
-            </div>
-          </div>
-          <!-- AI Specification Input (Chatbot - Do not touch) -->
-          <div class="  p-6 rounded-md text-center mt-auto">
-            <div class="container_chat_bot">
-              <div class="container-chat-options">
-                <div class="chat">
-                  <div class="chat-bot">
-                    <textarea id="chat_bot" name="chat_bot" placeholder="Imagine Something...✦˚" class="bg-background w-full text-white placeholder-gray-400 p-4 rounded-md focus:outline-none resize-none"></textarea>
-                  </div>
-                  <div class="options mt-3">
-                    <div class="btns-add flex gap-2">
-                      <button class="text-gray-300 hover:text-white">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24">
-                          <path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 8v8a5 5 0 1 0 10 0V6.5a3.5 3.5 0 1 0-7 0V15a2 2 0 0 0 4 0V8" />
-                        </svg>
-                      </button>
-                      <button class="text-gray-300 hover:text-white">
-                        <svg viewBox="0 0 24 24" height="20" width="20" xmlns="http://www.w3.org/2000/svg">
-                          <path d="M4 5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v4a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1zm0 10a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v4a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1zm10 0a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v4a1 1 0 0 1-1 1h-4a1 1 0 0 1-1-1zm0-8h6m-3-3v6" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" stroke="currentColor" fill="none"></path>
-                        </svg>
-                      </button>
-                    </div>
-                    <button class="btn-submit mt-4 bg-primary px-5 py-2 rounded-md text-white font-medium hover:bg-opacity-90">
-                      <svg viewBox="0 0 512 512" class="w-5 h-5">
-                        <path fill="currentColor" d="M473 39.05a24 24 0 0 0-25.5-5.46L47.47 185h-.08a24 24 0 0 0 1 45.16l.41.13l137.3 58.63a16 16 0 0 0 15.54-3.59L422 80a7.07 7.07 0 0 1 10 10L226.66 310.26a16 16 0 0 0-3.59 15.54l58.65 137.38c.06.2.12.38.19.57c3.2 9.27 11.3 15.81 21.09 16.25h1a24.63 24.63 0 0 0 23-15.46L478.39 64.62A24 24 0 0 0 473 39.05" />
-                      </svg>
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </main>
+<body class="bg-background text-secondary font-sans min-h-screen flex flex-col">
+  <header class="flex items-center justify-between p-4 bg-card border-b border-gray-700 shadow-md">
+    <div class="text-xl font-bold text-primary">Dashboard</div>
+  
+    <!-- Hamburger Button -->
+    <button id="menuToggle" class="sm:hidden text-white focus:outline-none">
+      <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+          d="M4 6h16M4 12h16M4 18h16" />
+      </svg>
+    </button>
+  
+    <!-- Navigation Links -->
+    <nav id="navMenu" class="hidden sm:flex items-center gap-6 text-sm">
+      <a href="#" class="text-white hover:text-primary">Overview</a>
+      <a href="#" class="text-white hover:text-primary">Projects</a>
+      <a href="#" class="text-white hover:text-primary">Team</a>
+      <a href="#" class="text-white hover:text-primary">Settings</a>
+    </nav>
+  
+    <!-- Logout Button (Always visible) -->
+    <button id="logoutBtn" class="ml-4 bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg text-sm">
+      Logout
+    </button>
+  </header>
+  
+  <!-- Mobile Dropdown Menu -->
+  <div id="mobileMenu" class="hidden bg-card border-t border-gray-700 sm:hidden flex flex-col gap-2 p-4">
+    <a href="#" class="text-white hover:text-primary">Overview</a>
+    <a href="#" class="text-white hover:text-primary">Projects</a>
+    <a href="#" class="text-white hover:text-primary">Team</a>
+    <a href="#" class="text-white hover:text-primary">Settings</a>
+  </div>
+  
+  <div class="flex flex-1">
+    <!-- Sidebar -->
+    <aside class="w-64 bg-card border-r border-gray-700 hidden md:block">
+      <!-- <div class="p-6 text-xl font-bold text-primary border-b border-gray-700">Dashboard</div> -->
+      <nav class="mt-6 px-6 space-y-4">
+        <a href="#" class="block text-sm font-medium hover:text-primary">Overview</a>
+        <a href="#" class="block text-sm hover:text-primary">Projects</a>
+        <a href="#" class="block text-sm hover:text-primary">Team</a>
+        <a href="#" class="block text-sm hover:text-primary">Settings</a>
+      </nav>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="flex-1 p-6 flex flex-col bg-background rounded-2xl shadow-md">
+      <header class="flex justify-between items-center mb-8">
+        <h1 class="text-2xl font-semibold text-white">AI Employee Allocation</h1>
+      </header>
+
+      <!-- Employee Sections -->
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-10">
+        <div>
+          <h2 class="text-lg font-semibold mb-4 text-white">Active Employees</h2>
+          <div id="activeEmployees" class="space-y-4 max-h-[600px] overflow-y-auto pr-2"></div>
+        </div>
+        <div>
+          <h2 class="text-lg font-semibold mb-4 text-white">Employees on Bench</h2>
+          <div id="benchEmployees" class="space-y-4 max-h-[600px] overflow-y-auto pr-2"></div>
+        </div>
       </div>
-    </div>
-    <script>
-      // 1. Static Employee Data (keep your current employees section as it is)
-      const employees = [{
-        name: "John Doe",
-        skill: "React, Node.js",
-        billable: "0%",
-        available: "3 Months",
-        type: "bench"
-      }, {
-        name: "Alice Brown",
-        skill: "Angular, TypeScript",
-        billable: "10%",
-        available: "1 Month",
-        type: "bench"
-      }, {
-        name: "Robert Lee",
-        skill: "Java, Spring Boot",
-        billable: "0%",
-        available: "2 Months",
-        type: "bench"
-      }, {
-        name: "Nina Patel",
-        skill: "Ruby on Rails",
-        billable: "5%",
-        available: "1.5 Months",
-        type: "bench"
-      }, {
-        name: "Kevin Zhu",
-        skill: "PHP, Laravel",
-        billable: "20%",
-        available: "2 Weeks",
-        type: "bench"
-      }, {
-        name: "David Kim",
-        skill: "Flutter, Dart",
-        billable: "15%",
-        available: "2 Months",
-        type: "bench"
-      }, {
-        name: "Emma Watson",
-        skill: "C#, .NET",
-        billable: "0%",
-        available: "3 Weeks",
-        type: "bench"
-      }, {
-        name: "Jane Smith",
-        skill: "Python, AI",
-        billable: "90%",
-        available: "2 Weeks",
-        type: "active"
-      }, {
-        name: "Michael Chan",
-        skill: "DevOps, Docker",
-        billable: "75%",
-        available: "1 Month",
-        type: "active"
-      }, {
-        name: "Priya Kumar",
-        skill: "Data Science, SQL",
-        billable: "80%",
-        available: "3 Weeks",
-        type: "active"
-      }, {
-        name: "Aditya Verma",
-        skill: "UI/UX, Figma",
-        billable: "60%",
-        available: "1 Week",
-        type: "active"
-      }, {
-        name: "Liam Wong",
-        skill: "AWS, Kubernetes",
-        billable: "85%",
-        available: "2 Weeks",
-        type: "active"
-      }, {
-        name: "Sara Connor",
-        skill: "GoLang, Microservices",
-        billable: "70%",
-        available: "4 Weeks",
-        type: "active"
-      }, {
-        name: "Ravi Sharma",
-        skill: "Machine Learning, Python",
-        billable: "65%",
-        available: "5 Weeks",
-        type: "active"
-      }, {
-        name: "Mei Lin",
-        skill: "JavaScript, Vue.js",
-        billable: "95%",
-        available: "3 Days",
-        type: "active"
-      }];
-      // 2. Rendering Employee Cards
-      const benchContainer = document.getElementById("benchEmployees");
+
+      <!-- Chatbot Section -->
+      <div class="mt-auto">
+        <div class="bg-card border border-gray-700 rounded-lg p-3 flex items-center gap-3">
+          <textarea id="chat_bot" placeholder="Ask about employee skills or availability..." 
+            class="flex-1 resize-none bg-transparent text-white placeholder-gray-400 text-sm p-2 focus:outline-none h-12"></textarea>
+          <button class="bg-primary hover:bg-blue-600 rounded-md p-2">
+            <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M22 2L11 13" />
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M22 2L15 22L11 13L2 9L22 2Z" />
+            </svg>
+          </button>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!-- Script to Fetch Employees -->
+  <script>
+    document.getElementById('menuToggle').addEventListener('click', () => {
+  const mobileMenu = document.getElementById('mobileMenu');
+  mobileMenu.classList.toggle('hidden');
+});
+
+document.getElementById('logoutBtn').addEventListener('click', () => {
+  localStorage.removeItem('loggedInUser');
+  window.location.href = '/login';
+});
+    async function fetchEmployeeData() {
+      try {
+        const response = await fetch('/static/employees4.csv');
+        const csvText = await response.text();
+        const parsed = Papa.parse(csvText, { header: true, skipEmptyLines: true, dynamicTyping: true });
+        const employees = parsed.data;
+
+        const activeEmployees = employees.filter(emp => emp["Billability Hours"] > 0 && emp["Billability Hours"] < 8 && emp["Employee Grade"] === "Reportee");
+        const fullyBillableEmployees = employees.filter(emp => emp["Billability Hours"] === 8 && emp["Employee Grade"] === "Reportee");
+        const benchEmployees = employees.filter(emp => emp["Billability Hours"] === 0 && emp["Employee Grade"] === "Reportee");
+
+        return { fullyBillableEmployees, activeEmployees, benchEmployees };
+      } catch (error) {
+        console.error('Error fetching employee data:', error);
+      }
+    }
+
+    function renderEmployeeCards(employees) {
+      const { fullyBillableEmployees, activeEmployees, benchEmployees } = employees;
       const activeContainer = document.getElementById("activeEmployees");
-      const renderEmployee = (emp) => `
-      
-					<div class="p-4 bg-gradient-to-br from-[#1f2937] via-[#111827] to-[#0f172a] border border-gray-700 rounded-2xl hover:shadow-lg  transition-all duration-300 overflow-hidden">
-						<div class="flex justify-between items-start">
-							<div>
-								<div class="font-semibold text-lg text-white mb-1">${emp.name}</div>
-								<div class="text-xs text-gray-400">Skill: ${emp.skill}</div>
-							</div>
-							<div class="text-right text-xs text-gray-400">
-								<div>Billable: ${emp.billable}</div>
-								<div>Available: ${emp.available}</div>
-							</div>
-						</div>
-					</div>
-    `;
-      employees.forEach(emp => {
-        const html = renderEmployee(emp);
-        if (emp.type === "bench") benchContainer.innerHTML += html;
-        else activeContainer.innerHTML += html;
+      const benchContainer = document.getElementById("benchEmployees");
+
+      const renderEmployee = (emp, status) => {
+        let badgeColor = "bg-gray-600";
+        if (status === "Fully Billable") badgeColor = "bg-green-600";
+        else if (status === "Partially Billable") badgeColor= "bg-yellow-600";
+        else if (status === "Benched") badgeColor = "bg-red-600";
+
+        return `
+          <div class="flex justify-between items-center p-4 bg-card border border-gray-700 rounded-lg hover:shadow-lg transition-all duration-300">
+            <div>
+              <div class="text-white font-semibold">${emp.Name}</div>
+              <div class="text-sm text-gray-400 mt-1">Skills: ${emp.Skill}</div>
+            </div>
+            <div class="flex-shrink-0">
+              <span class="text-xs text-white py-1 px-3 rounded-md  ${badgeColor}">${status}</span>
+            </div>
+          </div>
+        `;
+      };
+
+      fullyBillableEmployees.forEach(emp => {
+        activeContainer.innerHTML += renderEmployee(emp, "Fully Billable");
       });
-      // 3. NEW Chatbot Integration for Backend API Call
-      document.querySelector('.btn-submit').addEventListener('click', async () => {
-        const description = document.getElementById('chat_bot').value.trim();
-        if (!description) {
-          alert('Please enter a project description first.');
-          return;
-        }
-        try {
-          const response = await fetch('http://127.0.0.1:8000/extract_skills', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-              description
-            })
-          });
-          if (!response.ok) {
-            throw new Error('API call failed.');
-          }
-          const data = await response.json();
-          console.log('API Response:', data);
-          alert(`✅ Extracted Skills: ${data.extracted_skills.join(', ')}\n\n✅ Matched Employees: ${data.matched_employees.join(', ')}\n\n✅ Best Match: ${data.best_matching_pair_by_bio.employee_1} & ${data.best_matching_pair_by_bio.employee_2} (Score: ${data.best_matching_pair_by_bio.similarity_score.toFixed(2)})`);
-        } catch (error) {
-          console.error('Error:', error);
-          alert('❌ Failed to fetch skills.');
-        }
+      activeEmployees.forEach(emp => {
+        activeContainer.innerHTML += renderEmployee(emp, "Partially Billable");
       });
-    </script>
-  </body>
+      benchEmployees.forEach(emp => {
+        benchContainer.innerHTML += renderEmployee(emp, "Benched");
+      });
+    }
+
+    window.onload = async () => {
+      const employees = await fetchEmployeeData();
+      if (employees) {
+        renderEmployeeCards(employees);
+      }
+    };
+  </script>
+</body>
 </html>

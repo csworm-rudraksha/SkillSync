@@ -186,32 +186,54 @@
         e.preventDefault();
         const usernameInput = document.getElementById('username').value.trim();
         const passwordInput = document.getElementById('password').value.trim();
+    
+        console.log('Entered Username:', usernameInput);
+        console.log('Entered Password:', passwordInput);
+    
         try {
+          // Fetch the CSV data
           const response = await fetch('/static/employees4.csv');
           const csvText = await response.text();
+          
+          // Parse the CSV data
           const parsed = Papa.parse(csvText, {
             header: true,
             skipEmptyLines: true,
             dynamicTyping: false,
             quoteChar: '"',
           });
+    
+          console.log('Parsed CSV Data:', parsed.data);
+    
           const users = parsed.data;
+    
+          // Find the matched user based on the entered username and password
           const matchedUser = users.find(user => user.Username?.trim() === usernameInput && user.Password?.trim() === passwordInput);
+    
+          console.log('Matched User:', matchedUser);
+    
           if (matchedUser) {
+            // Create the user profile object
             const userProfile = {
               username: matchedUser.Username?.trim(),
               name: matchedUser.Name?.trim(),
               bio: matchedUser.Bio?.trim(),
               skills: (matchedUser.Skill || '').split(',').map(skill => skill.trim()),
               billability: matchedUser["Billability Hours"]?.trim(),
-              manager: matchedUser.Manager?.trim() || ""
+              manager: matchedUser.Manager?.trim() || "",
+              grade: matchedUser["Employee Grade"]?.trim() || ""  // Add Employee Grade to user profile
             };
+    
+            // Store the user profile in local storage
             localStorage.setItem('loggedInUser', JSON.stringify(userProfile));
+    
             alert('Login Successful! Welcome ' + matchedUser.Name);
-            if (!userProfile.manager) {
-              window.location.href = '/manager'; // Manager Dashboard
+    
+            // Redirect based on Employee Grade
+            if (userProfile.grade === 'Manager') {  // Check if the employee grade is Manager
+              window.location.href = '/manager';  // Redirect to Manager Dashboard
             } else {
-              window.location.href = '/employee'; // Employee Dashboard
+              window.location.href = '/employee';  // Redirect to Employee Dashboard
             }
           } else {
             alert('Invalid Username or Password.');
@@ -222,5 +244,7 @@
         }
       });
     </script>
+    
+    
   </body>
 </html>

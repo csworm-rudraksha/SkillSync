@@ -1,16 +1,15 @@
 <!DOCTYPE html>
 <html lang="en">
   <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Employee Info</title>
+
+    <!-- Load Tailwind first -->
     <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- Then set Tailwind config -->
     <script>
-      const user = JSON.parse(localStorage.getItem('loggedInUser'));
-      if (!user) {
-        alert('Please login first.');
-        window.location.href = '/login';
-      }
       tailwind.config = {
         theme: {
           extend: {
@@ -26,12 +25,16 @@
             }
           }
         }
-      }
+      };
     </script>
+
+    <!-- Fonts and external styles -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/style.css">
   </head>
+
   <body class="bg-background min-h-screen text-white font-sans flex flex-col items-center justify-center p-4 md:p-6">
-    <!-- Your full same HTML till here -->
+    <!-- Profile Section -->
     <div class="w-full max-w-3xl bg-card p-8 rounded-xl shadow-2xl relative overflow-hidden">
       <div class="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-primary to-accent"></div>
       <h1 class="text-4xl font-bold mb-8 text-center text-white">Employee Profile</h1>
@@ -56,7 +59,8 @@
         <button id="editProfileBtn" class="w-full bg-primary py-4 rounded-lg mt-8 text-white text-lg font-medium hover:bg-[#0D56E0] transition-colors shadow-md">Edit Profile</button>
       </div>
     </div>
-    <!-- Edit Modal (Same, no changes needed visually) -->
+
+    <!-- Edit Modal -->
     <div id="editModal" class="hidden fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50 p-4">
       <div class="bg-card p-8 rounded-xl w-full max-w-3xl relative overflow-hidden max-h-[90vh] overflow-y-auto">
         <div class="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-primary to-accent"></div>
@@ -93,7 +97,8 @@
         </div>
       </div>
     </div>
-    <!-- Skill Modal (Same visually) -->
+
+    <!-- Skill Modal -->
     <div id="skillModal" class="hidden fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50">
       <div class="bg-card p-6 rounded-xl w-96 relative overflow-hidden shadow-2xl">
         <div class="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-primary to-accent"></div>
@@ -105,21 +110,27 @@
         </div>
       </div>
     </div>
-    <!-- 🔥 JS to Handle Local Storage and Edit -->
+
+    <!-- LocalStorage Handling -->
     <script>
-      user = JSON.parse(localStorage.getItem('loggedInUser'));
-      if (user) {
-        document.getElementById('displayName').textContent = user.name;
-        document.getElementById('displayBio').textContent = user.bio;
-        const skillsContainer = document.getElementById('displaySkills');
-        skillsContainer.innerHTML = '';
-        user.skills.forEach(skill => {
-          const span = document.createElement('span');
-          span.className = 'bg-[#1E1E1E] px-4 py-2 rounded-md text-sm text-white border border-[#3A3A3A]';
-          span.textContent = skill;
-          skillsContainer.appendChild(span);
-        });
+      let user = JSON.parse(localStorage.getItem('loggedInUser'));
+      if (!user) {
+        alert('Please login first.');
+        window.location.href = '/login';
       }
+
+      document.getElementById('displayName').textContent = user.name;
+      document.getElementById('displayBio').textContent = user.bio;
+
+      const skillsContainer = document.getElementById('displaySkills');
+      skillsContainer.innerHTML = '';
+      user.skills.forEach(skill => {
+        const span = document.createElement('span');
+        span.className = 'bg-[#1E1E1E] px-4 py-2 rounded-md text-sm text-white border border-[#3A3A3A]';
+        span.textContent = skill;
+        skillsContainer.appendChild(span);
+      });
+
       // Elements
       const editProfileBtn = document.getElementById('editProfileBtn');
       const closeEditModal = document.getElementById('closeEditModal');
@@ -132,7 +143,8 @@
       const newSkillInput = document.getElementById('newSkillInput');
       const cancelSkillBtn = document.getElementById('cancelSkillBtn');
       const confirmSkillBtn = document.getElementById('confirmSkillBtn');
-      // Edit open
+
+      // Edit modal open
       editProfileBtn.addEventListener('click', () => {
         editName.value = user.name;
         editBio.value = user.bio;
@@ -143,24 +155,30 @@
         });
         document.getElementById('editModal').classList.remove('hidden');
       });
+
       closeEditModal.addEventListener('click', () => {
         document.getElementById('editModal').classList.add('hidden');
       });
-      // Save edit
+
+      // Save profile
       saveProfileBtn.addEventListener('click', () => {
-        user.name = editName.value.trim();
-        user.bio = editBio.value.trim();
-        user.skills = Array.from(editSkillsList.children).map(div => div.firstChild.textContent);
-        localStorage.setItem('loggedInUser', JSON.stringify(user));
-        location.reload(); // simple reload to update
+        let updatedUser = { ...user };
+        updatedUser.name = editName.value.trim();
+        updatedUser.bio = editBio.value.trim();
+        updatedUser.skills = Array.from(editSkillsList.children).map(div => div.firstChild.textContent);
+
+        localStorage.setItem('loggedInUser', JSON.stringify(updatedUser));
+        location.reload();
       });
-      // Add Skill
+
       addSkillBtn.addEventListener('click', () => {
         skillModal.classList.remove('hidden');
       });
+
       cancelSkillBtn.addEventListener('click', () => {
         skillModal.classList.add('hidden');
       });
+
       confirmSkillBtn.addEventListener('click', () => {
         const newSkill = newSkillInput.value.trim();
         if (newSkill) {
