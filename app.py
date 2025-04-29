@@ -4,6 +4,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel
+from itertools import combinations
 import requests
 import configparser
 import pandas as pd
@@ -36,6 +37,7 @@ employee_data = pd.read_csv('static/employees4.csv')
 
 class ProjectDescriptionRequest(BaseModel):
     description: str
+    num_employees: int = 3
 
 def get_iam_token(api_key: str) -> str:
     api_key = api_key.strip()
@@ -67,6 +69,7 @@ def extract_skills(description: str, access_token: str) -> str:
     response = requests.post(url, headers=headers, json=payload)
     response.raise_for_status()
     result = response.json()
+    
     skills_text = result['results'][0]['generated_text'].strip()
     return skills_text
 
@@ -76,7 +79,9 @@ def match_skills_to_employees(skills_list):
         employee_skills = str(row['Skill']).split(',')
         employee_skills = [skill.strip().lower() for skill in employee_skills]
         match_count = sum(1 for skill in skills_list if skill.strip().lower() in employee_skills)
-        employee_matches.append((row['Name'], match_count))
+        if str(row.get('Billability Hours', '0')).strip() == '0':
+            employee_matches.append((row['Name'], match_count)) 
+
     employee_matches = sorted(employee_matches, key=lambda x: x[1], reverse=True)
     matching_employees = [name for name, count in employee_matches if count > 0]
     return matching_employees
@@ -97,6 +102,7 @@ def get_similarity_score(text1: str, text2: str, access_token: str) -> float:
     response = requests.post(url, headers=headers, json=payload)
     response.raise_for_status()
     result = response.json()
+    # print("LLM Similarity Response:", result)
     generated_text = result['results'][0]['generated_text'].strip()
     try:
         similarity_score = float(generated_text)
@@ -106,32 +112,57 @@ def get_similarity_score(text1: str, text2: str, access_token: str) -> float:
 
 # API to extract skills and match employees
 @app.post("/extract_skills")
+# Inside your API function for extracting skills and matching employees
 def extract_project_skills(request: ProjectDescriptionRequest):
     try:
         access_token = get_iam_token(api_key)
         skills_text = extract_skills(request.description, access_token)
         skills_list = [skill.strip() for skill in skills_text.split(',') if skill.strip()]
-        matched_employees = match_skills_to_employees(skills_list)
+        matched_employees_all = match_skills_to_employees(skills_list)
+        matched_employees = matched_employees_all
+        if len(matched_employees) < request.num_employees:
+            raise HTTPException(status_code=400, detail="Not enough matched employees found.")
 
-        best_pair = ("", "", 0)
+        similarity_scores = []
         for emp1, emp2 in itertools.combinations(matched_employees, 2):
             bio1 = employee_data.loc[employee_data['Name'] == emp1, 'Bio'].values[0]
             bio2 = employee_data.loc[employee_data['Name'] == emp2, 'Bio'].values[0]
             similarity = get_similarity_score(bio1, bio2, access_token)
-            if similarity > best_pair[2]:
-                best_pair = (emp1, emp2, similarity)
+            similarity_scores.append({
+                "employee_1": emp1,
+                "employee_2": emp2,
+                "similarity_score": similarity
+            })
 
-        return {
+        similarity_scores = sorted(similarity_scores, key=lambda x: x["similarity_score"], reverse=True)
+
+        multi_group_scores = []
+        for r in range(request.num_employees, len(matched_employees) + 1):  # 3 to N-member groups
+            for group in combinations(matched_employees, r):
+                bios = [employee_data.loc[employee_data['Name'] == emp, 'Bio'].values[0] for emp in group]
+                merged_bio = " ".join(bios)
+
+                # Compare group bio with project description
+                similarity = get_similarity_score(merged_bio, request.description, access_token)
+
+                multi_group_scores.append({
+                    "group_members": list(group),
+                    "group_size": r,
+                    "similarity_score": similarity
+                })
+
+        response = {
             "extracted_skills": skills_list,
             "matched_employees": matched_employees,
-            "best_matching_pair_by_bio": {
-                "employee_1": best_pair[0],
-                "employee_2": best_pair[1],
-                "similarity_score": best_pair[2]
-            }
+            "multi_member_group_similarity": multi_group_scores
         }
+
+        return response
+
     except Exception as e:
+        print("Error:", e)
         raise HTTPException(status_code=400, detail=str(e))
+
 
 # Serve login page as root
 @app.get("/", response_class=HTMLResponse)
