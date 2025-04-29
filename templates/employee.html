@@ -123,12 +123,12 @@
       let user = JSON.parse(localStorage.getItem('loggedInUser'));
       if (!user) {
         alert('Please login first.');
-        window.location.href = '/login';
+        window.location.href = '/';
       }
 		
 		document.getElementById('logoutBtn').addEventListener('click', () => {
 		localStorage.removeItem('loggedInUser');
-		window.location.href = '/login';
+		window.location.href = '/';
 	  });
       document.getElementById('displayName').textContent = user.name;
       document.getElementById('displayBio').textContent = user.bio;

@@ -35,7 +35,7 @@
 
 <body class="bg-background text-secondary font-sans min-h-screen flex flex-col">
   <header class="flex items-center justify-between p-4 bg-card border-b border-gray-700 shadow-md">
-    <div class="text-xl font-bold text-primary">Employee Details</div>
+    <div class="text-xl font-bold">Employee Details</div>
   
     <!-- Hamburger Button -->
     <button id="menuToggle" class="sm:hidden text-white focus:outline-none">
@@ -44,14 +44,6 @@
           d="M4 6h16M4 12h16M4 18h16" />
       </svg>
     </button>
-  
-    <!-- Navigation Links -->
-    <nav id="navMenu" class="hidden sm:flex items-center gap-6 text-sm">
-      <a href="#" class="text-white hover:text-primary">Dashboard</a>
-      <a href="#" class="text-white hover:text-primary">Suggestion</a>
-      <a href="#" class="text-white hover:text-primary">Approved Employees</a>
-      <a href="#" class="text-white hover:text-primary">Settings</a>
-    </nav>
   
     <!-- Logout Button (Always visible) -->
     <button id="logoutBtn" class="ml-4 bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg text-sm">
@@ -64,7 +56,6 @@
     <a href="#" class="text-white hover:text-primary">Dashboard</a>
     <a href="#" class="text-white hover:text-primary">Suggestion</a>
     <a href="#" class="text-white hover:text-primary">Approved Employees</a>
-    <a href="#" class="text-white hover:text-primary">Settings</a>
   </div>
   
   <div class="flex flex-1">
@@ -75,24 +66,20 @@
         <a href="#" class="block text-sm font-medium hover:text-primary">Dashboard</a>
         <a href="#" class="block text-sm hover:text-primary">Suggestion</a>
         <a href="#" class="block text-sm hover:text-primary">Approved Employees</a>
-        <a href="#" class="block text-sm hover:text-primary">Settings</a>
       </nav>
     </aside>
 
     <!-- Main Content -->
     <main class="flex-1 p-6 flex flex-col bg-background rounded-2xl shadow-md">
-      <header class="flex justify-between items-center mb-8">
-        <h1 class="text-2xl font-semibold text-white">AI Employee Allocation</h1>
-      </header>
-
+      
       <!-- Employee Sections -->
       <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-10">
         <div>
-          <h2 class="text-lg font-semibold mb-4 text-white">Active Employees</h2>
+          <h2 class="text-lg font-semibold mb-4 text-white">Billable Employees</h2>
           <div id="activeEmployees" class="space-y-4 max-h-[600px] overflow-y-auto pr-2"></div>
         </div>
         <div>
-          <h2 class="text-lg font-semibold mb-4 text-white">Employees on Bench</h2>
+          <h2 class="text-lg font-semibold mb-4 text-white">Benched Employees</h2>
           <div id="benchEmployees" class="space-y-4 max-h-[600px] overflow-y-auto pr-2"></div>
         </div>
       </div>
@@ -122,7 +109,7 @@
 
 document.getElementById('logoutBtn').addEventListener('click', () => {
   localStorage.removeItem('loggedInUser');
-  window.location.href = '/login';
+  window.location.href = '/';
 });
     async function fetchEmployeeData() {
       try {
