@@ -227,7 +227,8 @@
             // Store the user profile in local storage
             localStorage.setItem('loggedInUser', JSON.stringify(userProfile));
     
-            alert('Login Successful! Welcome ' + matchedUser.Name);
+            //alert('Login Successful! Welcome ' + matchedUser.Name);
+
     
             // Redirect based on Employee Grade
             if (userProfile.grade === 'Manager') {  // Check if the employee grade is Manager
