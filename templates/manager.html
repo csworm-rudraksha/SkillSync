@@ -63,7 +63,7 @@
     <aside class="w-64 bg-card border-r border-gray-700 hidden md:block">
       <!-- <div class="p-6 text-xl font-bold text-primary border-b border-gray-700">Dashboard</div> -->
       <nav class="mt-6 px-6 space-y-4">
-        <a href="#" class="block text-sm font-medium hover:text-primary">Dashboard</a>
+        <a href="#" class="block text-sm font-medium text-blue-500">Dashboard</a>
         <a href="#" class="block text-sm hover:text-primary">Suggestion</a>
         <a href="#" class="block text-sm hover:text-primary">Approved Employees</a>
       </nav>
@@ -89,16 +89,21 @@
         <div class="bg-card border border-gray-700 rounded-lg p-3 flex items-center gap-3">
           <textarea id="chat_bot" placeholder="Ask about employee skills or availability..." 
             class="flex-1 resize-none bg-transparent text-white placeholder-gray-400 text-sm p-2 focus:outline-none h-12"></textarea>
-          <button class="bg-primary hover:bg-blue-600 rounded-md p-2">
-            <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M22 2L11 13" />
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M22 2L15 22L11 13L2 9L22 2Z" />
-            </svg>
+          <!--<button class="bg-primary hover:bg-blue-600 rounded-md p-2">-->
+		  <!--<button id="chatSubmit" class="bg-primary hover:bg-blue-600 rounded-md p-2">-->
+		  
+		  <button id="chatSubmit" class="bg-primary hover:bg-blue-600 rounded-md p-2">
+  <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M22 2L11 13" />
+    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M22 2L15 22L11 13L2 9L22 2Z" />
+  </svg>
+</button>
           </button>
         </div>
       </div>
     </main>
   </div>
+
 
   <!-- Script to Fetch Employees -->
   <script>
@@ -169,6 +174,39 @@ document.getElementById('logoutBtn').addEventListener('click', () => {
         renderEmployeeCards(employees);
       }
     };
+	
+	
+    document.getElementById('chatSubmit').addEventListener('click', async function () {
+        const question = document.getElementById('chat_bot').value.trim();
+        if (!question) {
+            //alert("AI is waiting to assist you");
+            return;
+        }
+
+        try {
+            const response = await fetch('/extract_skills', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ description: question })
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.detail || "An error occurred");
+            }
+
+            const data = await response.json();
+
+            let output = `Extracted Skills:\n- ${data.extracted_skills.join(', ')}\n\nMatched Employees:\n- ${data.matched_employees.join(', ')}\n\nBest Matching Pair by Bio:\n- ${data.best_matching_pair_by_bio.employee_1} & ${data.best_matching_pair_by_bio.employee_2} (Score: ${data.best_matching_pair_by_bio.similarity_score})`;
+
+            alert(output);
+        } catch (err) {
+            alert("Error: " + err.message);
+        }
+    });
+	
   </script>
 </body>
 </html>
