@@ -35,6 +35,13 @@
 
   <body class="bg-background min-h-screen text-white font-sans flex flex-col items-center justify-center p-4 md:p-6">
     <!-- Profile Section -->
+	
+    <!-- Logout Button (Always visible) -->
+   <button id="logoutBtn" class="absolute top-4 right-4 bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg text-sm">
+    Logout
+  </button>
+  </header>
+	
     <div class="w-full max-w-3xl bg-card p-8 rounded-xl shadow-2xl relative overflow-hidden">
       <div class="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-primary to-accent"></div>
       <h1 class="text-4xl font-bold mb-8 text-center text-white">Employee Profile</h1>
@@ -118,7 +125,11 @@
         alert('Please login first.');
         window.location.href = '/login';
       }
-
+		
+		document.getElementById('logoutBtn').addEventListener('click', () => {
+		localStorage.removeItem('loggedInUser');
+		window.location.href = '/login';
+	  });
       document.getElementById('displayName').textContent = user.name;
       document.getElementById('displayBio').textContent = user.bio;
 
