@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AI Dashboard - Suggestions</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            primary: '#0F62FE',
+            secondary: '#CCCCCC',
+            accent: '#A6C8FF',
+            background: '#0D1117',
+            card: '#161B22',
+            success: '#16A34A',
+            danger: '#DC2626'
+          },
+          fontFamily: {
+            sans: ['Inter', 'sans-serif']
+          }
+        }
+      }
+    };
+  </script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/style.css">
+  <style>
+    .tick-circle {
+      stroke-dasharray: 157;
+      stroke-dashoffset: 157;
+      animation: drawCircle 0.5s ease-out forwards;
+    }
+    .tick-mark {
+      stroke-dasharray: 48;
+      stroke-dashoffset: 48;
+      animation: drawTick 0.5s 0.4s ease-out forwards;
+    }
+    @keyframes drawCircle {
+      to {
+        stroke-dashoffset: 0;
+      }
+    }
+    @keyframes drawTick {
+      to {
+        stroke-dashoffset: 0;
+      }
+    }
+  </style>
+</head>
+
+<body class="bg-background text-secondary font-sans min-h-screen flex flex-col">
+  <header class="flex items-center justify-between p-4 bg-card border-b border-gray-700 shadow-md">
+    <div class="text-xl font-bold">Employee Details</div>
+    <button id="logoutBtn" class="ml-4 bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg text-sm">Logout</button>
+  </header>
+
+  <div class="flex flex-1">
+    <aside class="w-64 bg-card border-r border-gray-700 hidden md:block">
+      <nav class="mt-6 px-6 space-y-4">
+        <a href="#" class="block text-sm hover:text-primary">Dashboard</a>
+        <a href="#" class="block text-sm text-blue-500 font-medium">Suggestion</a>
+        <a href="#" class="block text-sm hover:text-primary">Approved Employees</a>
+      </nav>
+    </aside>
+
+    <main class="flex-1 p-6 bg-background rounded-2xl shadow-md">
+      <div id="setContainer" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-2 gap-8"></div>
+    </main>
+  </div>
+
+  <!-- Modal -->
+  <div id="successModal" class="hidden fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50">
+    <div class="bg-card p-8 rounded-xl shadow-lg text-center w-80">
+      <svg class="w-16 h-16 text-green-500 mx-auto mb-4" viewBox="0 0 52 52">
+        <circle class="tick-circle" cx="26" cy="26" r="25" fill="none" stroke="currentColor" stroke-width="3"/>
+        <path class="tick-mark" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" d="M14 27l8 8 16-16"/>
+      </svg>
+      <h2 class="text-white font-semibold text-xl mb-2">Set Selected!</h2>
+      <p class="text-gray-400">Only one set can be active at a time.</p>
+    </div>
+  </div>
+
+  <script>
+    const sets = [
+      {
+        name: 'Set 1',
+        employees: [
+          { name: 'Aarav', skill: 'React', score: 90 },
+          { name: 'Sara', skill: 'Java', score: 82 },
+          { name: 'Omar', skill: 'Kubernetes', score: 75 },
+          { name: 'Lena', skill: 'MySQL', score: 70 },
+          { name: 'Yu', skill: 'Docker', score: 66 },
+        ]
+      },
+      {
+        name: 'Set 2',
+        employees: [
+          { name: 'Nina', skill: 'Go', score: 88 },
+          { name: 'Raj', skill: 'Python', score: 80 },
+          { name: 'Jade', skill: 'MongoDB', score: 72 },
+          { name: 'Elio', skill: 'GraphQL', score: 68 },
+          { name: 'Zara', skill: 'GitLab CI', score: 65 },
+        ]
+      },
+      {
+        name: 'Set 3',
+        employees: [
+          { name: 'Ivy', skill: 'TypeScript', score: 89 },
+          { name: 'Tariq', skill: 'Terraform', score: 79 },
+          { name: 'Mira', skill: 'Django', score: 73 },
+          { name: 'Jose', skill: 'PostgreSQL', score: 69 },
+          { name: 'Lily', skill: 'Airflow', score: 64 },
+        ]
+      },
+      {
+        name: 'Set 4',
+        employees: [
+          { name: 'Anya', skill: 'Next.js', score: 92 },
+          { name: 'Ravi', skill: 'Flask', score: 81 },
+          { name: 'Kai', skill: 'ElasticSearch', score: 74 },
+          { name: 'Emma', skill: 'Cassandra', score: 67 },
+          { name: 'Noah', skill: 'Prometheus', score: 60 },
+        ]
+      }
+    ];
+
+    let selectedSetIndex = null;
+
+    function renderSets() {
+      const container = document.getElementById('setContainer');
+      container.innerHTML = '';
+
+      sets.forEach((set, index) => {
+        const card = document.createElement('div');
+        card.className = `team-card bg-card border rounded-xl shadow-lg p-4 space-y-4 transition-transform duration-300 hover:scale-105 relative ${selectedSetIndex === index ? 'border-green-500' : 'border-gray-700'}`;
+
+        const tick = selectedSetIndex === index ? `
+          <div class="absolute top-2 right-2 text-green-400">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7" />
+            </svg>
+          </div>
+        ` : '';
+
+        const isSelected = selectedSetIndex !== null;
+
+        card.innerHTML = `
+          ${tick}
+          <h3 class="text-white font-semibold text-center mb-2">${set.name}</h3>
+          <div class="space-y-2">
+            ${set.employees.map(emp => `
+              <div class="flex justify-between items-center bg-gray-800 p-3 rounded-md">
+                <div>
+                  <div class="text-white font-medium">${emp.name}</div>
+                  <div class="text-sm text-gray-400">Skills: ${emp.skill}</div>
+                </div>
+                <div class="text-sm text-green-400 font-semibold">Score: ${emp.score}</div>
+              </div>
+            `).join('')}
+          </div>
+          <div class="flex justify-between mt-4">
+            <button class="select-btn w-full mr-2 bg-green-600 hover:bg-green-700 text-white py-2 rounded-lg" onclick="selectSet(${index})" ${isSelected && selectedSetIndex !== index ? 'disabled class=\'opacity-50 cursor-not-allowed\'' : ''}>${selectedSetIndex === index ? 'Set Selected' : 'Choose Set'}</button>
+            <button class="cancel-btn w-full ml-2 bg-red-600 hover:bg-red-700 text-white py-2 rounded-lg" onclick="cancelSelection()" ${selectedSetIndex === null ? 'disabled class=\'opacity-50 cursor-not-allowed\'' : ''}>Cancel</button>
+          </div>
+        `;
+
+        container.appendChild(card);
+      });
+    }
+
+    function selectSet(index) {
+      if (selectedSetIndex !== null) return;
+      selectedSetIndex = index;
+
+      const modal = document.getElementById("successModal");
+      modal.classList.remove("hidden");
+
+      const circle = document.querySelector(".tick-circle");
+      const check = document.querySelector(".tick-mark");
+      circle.style.animation = 'none';
+      check.style.animation = 'none';
+      void circle.offsetWidth;
+      void check.offsetWidth;
+      circle.style.animation = '';
+      check.style.animation = '';
+
+      setTimeout(() => {
+        modal.classList.add("hidden");
+        renderSets();
+      }, 2500);
+    }
+
+    function cancelSelection() {
+      selectedSetIndex = null;
+      renderSets();
+    }
+
+    document.getElementById('logoutBtn').addEventListener('click', () => {
+      localStorage.removeItem('loggedInUser');
+      window.location.href = '/';
+    });
+
+    renderSets();
+  </script>
+  <!-- Fixed Chatbot Input -->
+  <div class="fixed bottom-4 inset-x-0 flex justify-center z-50">
+    <div class="bg-card border border-gray-700 rounded-lg px-6 py-4 w-full max-w-3xl flex items-center gap-3">
+    
+        <input type="text" placeholder="Ask something..." class="flex-1 bg-transparent text-white placeholder-gray-400 focus:outline-none text-sm" id="chatInput" />
+      <button class="bg-primary hover:bg-blue-600 p-2 rounded-lg" aria-label="Send">
+        <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M22 2L11 13" />
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M22 2L15 22L11 13L2 9L22 2Z" />
+        </svg>
+      </button>
+    </div>
+  </div>
+</body>
+</html>
