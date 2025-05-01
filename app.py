@@ -4,6 +4,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel
+from typing import List
 import requests
 import configparser
 import pandas as pd
@@ -36,6 +37,7 @@ employee_data = pd.read_csv('static/employees4.csv')
 
 class ProjectDescriptionRequest(BaseModel):
     description: str
+    group_size: int = 2
 
 def get_iam_token(api_key: str) -> str:
     api_key = api_key.strip()
@@ -104,7 +106,22 @@ def get_similarity_score(text1: str, text2: str, access_token: str) -> float:
         similarity_score = 0.0
     return similarity_score
 
-# API to extract skills and match employees
+@app.get("/", response_class=HTMLResponse)
+async def login_page(request: Request):
+    return templates.TemplateResponse("login.html", {"request": request})
+
+@app.get("/employee", response_class=HTMLResponse)
+async def employee_dashboard(request: Request):
+    return templates.TemplateResponse("employee.html", {"request": request})
+
+@app.get("/manager", response_class=HTMLResponse)
+async def manager_dashboard(request: Request):
+    return templates.TemplateResponse("manager.html", {"request": request})
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run("app:app", host="0.0.0.0", port=8000, reload=True)
+
 @app.post("/extract_skills")
 def extract_project_skills(request: ProjectDescriptionRequest):
     try:
@@ -113,41 +130,29 @@ def extract_project_skills(request: ProjectDescriptionRequest):
         skills_list = [skill.strip() for skill in skills_text.split(',') if skill.strip()]
         matched_employees = match_skills_to_employees(skills_list)
 
-        best_pair = ("", "", 0)
-        for emp1, emp2 in itertools.combinations(matched_employees, 2):
-            bio1 = employee_data.loc[employee_data['Name'] == emp1, 'Bio'].values[0]
-            bio2 = employee_data.loc[employee_data['Name'] == emp2, 'Bio'].values[0]
-            similarity = get_similarity_score(bio1, bio2, access_token)
-            if similarity > best_pair[2]:
-                best_pair = (emp1, emp2, similarity)
+        group_size = min(request.group_size, len(matched_employees))
+        group_similarity_scores = []
+
+        for group in itertools.combinations(matched_employees, group_size):
+            pairwise = list(itertools.combinations(group, 2))
+            similarities = []
+            for emp1, emp2 in pairwise:
+                bio1 = employee_data.loc[employee_data['Name'] == emp1, 'Bio'].values[0]
+                bio2 = employee_data.loc[employee_data['Name'] == emp2, 'Bio'].values[0]
+                similarity = get_similarity_score(bio1, bio2, access_token)
+                similarities.append(similarity)
+            avg_similarity = round(sum(similarities) / len(similarities), 2) if similarities else 0.0
+            group_similarity_scores.append({
+                "employees": list(group),
+                "average_similarity": avg_similarity
+            })
+
+        group_similarity_scores.sort(key=lambda x: x["average_similarity"], reverse=True)
 
         return {
             "extracted_skills": skills_list,
             "matched_employees": matched_employees,
-            "best_matching_pair_by_bio": {
-                "employee_1": best_pair[0],
-                "employee_2": best_pair[1],
-                "similarity_score": best_pair[2]
-            }
+            "group_similarity_scores": group_similarity_scores
         }
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
-
-# Serve login page as root
-@app.get("/", response_class=HTMLResponse)
-async def login_page(request: Request):
-    return templates.TemplateResponse("login.html", {"request": request})
-
-# Serve employee dashboard after login
-@app.get("/employee", response_class=HTMLResponse)
-async def employee_dashboard(request: Request):
-    return templates.TemplateResponse("employee.html", {"request": request})
-
-# Serve manager dashboard after login
-@app.get("/manager", response_class=HTMLResponse)
-async def manager_dashboard(request: Request):
-    return templates.TemplateResponse("manager.html", {"request": request})
-
-if __name__ == "__main__":
-    import uvicorn
-    uvicorn.run("app:app", host="0.0.0.0", port=8000, reload=True)
