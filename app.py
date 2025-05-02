@@ -75,6 +75,8 @@ def extract_skills(description: str, access_token: str) -> str:
 def match_skills_to_employees(skills_list):
     employee_matches = []
     for _, row in employee_data.iterrows():
+        if int(row.get('Billability Hours', 1)) != 0:
+            continue
         employee_skills = str(row['Skill']).split(',')
         employee_skills = [skill.strip().lower() for skill in employee_skills]
         match_count = sum(1 for skill in skills_list if skill.strip().lower() in employee_skills)
@@ -128,7 +130,7 @@ def extract_project_skills(request: ProjectDescriptionRequest):
         access_token = get_iam_token(api_key)
         skills_text = extract_skills(request.description, access_token)
         skills_list = [skill.strip() for skill in skills_text.split(',') if skill.strip()]
-        matched_employees = match_skills_to_employees(skills_list)
+        matched_employees = match_skills_to_employees(skills_list)[:6]
 
         group_size = min(request.group_size, len(matched_employees))
         group_similarity_scores = []
@@ -148,11 +150,31 @@ def extract_project_skills(request: ProjectDescriptionRequest):
             })
 
         group_similarity_scores.sort(key=lambda x: x["average_similarity"], reverse=True)
+        top_groups = group_similarity_scores[:4]
+
+        if group_size >= 4 and top_groups:
+            worst_group = top_groups[-1]["employees"]
+            pairwise_scores = []
+            for emp1, emp2 in itertools.combinations(worst_group, 2):
+                bio1 = employee_data.loc[employee_data['Name'] == emp1, 'Bio'].values[0]
+                bio2 = employee_data.loc[employee_data['Name'] == emp2, 'Bio'].values[0]
+                score = get_similarity_score(bio1, bio2, access_token)
+                pairwise_scores.append((emp1, emp2, score))
+
+            emp_score_map = {}
+            for emp1, emp2, score in pairwise_scores:
+                emp_score_map[emp1] = emp_score_map.get(emp1, 0) + score
+                emp_score_map[emp2] = emp_score_map.get(emp2, 0) + score
+
+            avg_scores = {emp: total / (group_size - 1) for emp, total in emp_score_map.items()}
+            outlier_employee = min(avg_scores.items(), key=lambda x: x[1])[0]
+            top_groups[-1]["outlier_employee"] = outlier_employee
 
         return {
             "extracted_skills": skills_list,
             "matched_employees": matched_employees,
-            "group_similarity_scores": group_similarity_scores
+            "group_similarity_scores": top_groups
         }
+
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
