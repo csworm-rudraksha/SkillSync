@@ -111,6 +111,9 @@ def get_similarity_score(text1: str, text2: str, access_token: str) -> float:
 @app.get("/", response_class=HTMLResponse)
 async def login_page(request: Request):
     return templates.TemplateResponse("login.html", {"request": request})
+@app.get("/approved", response_class=HTMLResponse)
+async def login_page(request: Request):
+    return templates.TemplateResponse("approved.html", {"request": request})
 
 @app.get("/employee", response_class=HTMLResponse)
 async def employee_dashboard(request: Request):
@@ -120,9 +123,9 @@ async def employee_dashboard(request: Request):
 async def manager_dashboard(request: Request):
     return templates.TemplateResponse("manager.html", {"request": request})
 
-if __name__ == "__main__":
-    import uvicorn
-    uvicorn.run("app:app", host="0.0.0.0", port=8000, reload=True)
+@app.get("/suggested", response_class=HTMLResponse)
+async def suggested_page(request: Request):
+    return templates.TemplateResponse("suggested.html", {"request": request})
 
 @app.post("/extract_skills")
 def extract_project_skills(request: ProjectDescriptionRequest):
@@ -178,3 +181,7 @@ def extract_project_skills(request: ProjectDescriptionRequest):
 
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run("app:app", host="0.0.0.0", port=8000, reload=True)

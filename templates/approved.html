@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Approved Set</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            background: '#0D1117',
+            card: '#161B22',
+            primary: '#0F62FE',
+            redSoft: '#7F1D1D'
+          },
+          fontFamily: {
+            sans: ['Inter', 'sans-serif']
+          }
+        }
+      }
+    };
+  </script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet" />
+</head>
+<body class="bg-background text-white font-sans min-h-screen flex flex-col">
+
+  <header class="flex items-center justify-between p-4 bg-card border-b border-gray-700 shadow-md">
+    <div class="text-xl font-bold">Employee Details</div>
+    <button id="menuToggle" class="sm:hidden text-white focus:outline-none">
+      <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
+      </svg>
+    </button>
+    <button id="logoutBtn" class="ml-4 bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg text-sm">Logout</button>
+  </header>
+
+  <div id="mobileMenu" class="hidden bg-card border-t border-gray-700 sm:hidden flex flex-col gap-2 p-4">
+    <a href="/manager" class="text-white hover:text-primary">Dashboard</a>
+    <a href="/suggested.html" class="text-white hover:text-primary">Suggestion</a>
+    <a href="/approved.html" class="text-white hover:text-primary">Approved Employees</a>
+  </div>
+
+  <div class="flex flex-1">
+    <aside class="w-64 bg-card border-r border-gray-700 hidden md:block">
+      <nav class="mt-6 px-6 space-y-4">
+        <a href="/manager" class="block text-sm hover:text-primary">Dashboard</a>
+        <a href="/suggested" class="block text-sm hover:text-primary">Suggestion</a>
+        <a href="/approved" class="block text-sm font-medium text-blue-500">Approved Employees</a>
+      </nav>
+    </aside>
+
+    <main class="flex-1 p-6 bg-background rounded-2xl shadow-md">
+      <h1 class="text-2xl font-bold mb-6 text-center">Approved Team Set</h1>
+      <div id="approvedContainer" class="max-w-2xl mx-auto space-y-4"></div>
+    </main>
+  </div>
+
+  <script>
+    document.getElementById('logoutBtn').addEventListener('click', () => {
+      localStorage.removeItem('loggedInUser');
+      window.location.href = '/';
+    });
+
+    document.getElementById('menuToggle').addEventListener('click', () => {
+      const mobileMenu = document.getElementById('mobileMenu');
+      mobileMenu.classList.toggle('hidden');
+    });
+
+    const approved = JSON.parse(localStorage.getItem("approvedSet") || "null");
+    const container = document.getElementById("approvedContainer");
+
+    if (!approved) {
+      container.innerHTML = "<p class='text-center text-gray-400'>No approved set found.</p>";
+    } else {
+      container.innerHTML = `
+        <div class="bg-card p-6 rounded-xl shadow-lg">
+          <h2 class="text-xl font-semibold mb-4">${approved.name}</h2>
+          ${approved.outlier ? `<p class="text-sm text-red-400 mb-4">Outlier: ${approved.outlier}</p>` : ''}
+          <div class="space-y-2">
+            ${approved.employees.map(emp => `
+              <div class="p-3 rounded-md ${emp.isOutlier ? 'bg-red-900/50' : 'bg-gray-800'}">
+                ${emp.name}
+              </div>
+            `).join('')}
+          </div>
+        </div>
+      `;
+    }
+  </script>
+</body>
+</html>
