@@ -107,10 +107,56 @@
       </div>
     </main>
   </div>
+  <!-- Loader -->
+<div id="loader" class="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50 hidden">
+  <div class="text-center">
+    <svg class="animate-spin h-10 w-10 text-white mx-auto mb-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+      <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+      <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path>
+    </svg>
+    <p class="text-white">Analyzing skills and forming teams...</p>
+  </div>
+</div>
+
 
 
   <!-- Script to Fetch Employees -->
   <script>
+    document.getElementById('chatSubmit').addEventListener('click', async function () {
+  const question = document.getElementById('chat_bot').value.trim();
+  const teamSize = parseInt(document.getElementById('teamSize').value) || 1;
+
+  if (!question) return;
+
+  const loader = document.getElementById("loader");
+  loader.style.display = "flex";
+
+  try {
+    const response = await fetch('/extract_skills', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ description: question, group_size: teamSize })
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.detail || "An error occurred");
+    }
+
+    const data = await response.json();
+    console.log("Response from backend:", data);
+
+    localStorage.setItem("suggestionResults", JSON.stringify(data.group_similarity_scores));
+    window.location.href = "/suggested";
+  } catch (err) {
+    alert("Error: " + err.message);
+  } finally {
+    loader.style.display = "none";
+  }
+});
+
     document.getElementById('menuToggle').addEventListener('click', () => {
       const mobileMenu = document.getElementById('mobileMenu');
       mobileMenu.classList.toggle('hidden');
