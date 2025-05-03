@@ -42,6 +42,21 @@
 
     <main class="flex-1 p-6 bg-background rounded-2xl shadow-md">
       <div id="setContainer" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-2 gap-8"></div>
+
+      <!-- Chatbot Section -->
+      <div class="mt-10">
+        <div class="bg-card border border-gray-700 rounded-lg p-3 flex flex-col gap-2 md:flex-row md:items-center">
+          <textarea id="chat_bot" placeholder="If you don't like this set, please create your custom set here"
+            class="flex-1 resize-none bg-transparent text-white placeholder-gray-400 text-sm p-2 focus:outline-none h-12"></textarea>
+
+          <button id="chatSubmit" class="bg-primary hover:bg-blue-600 rounded-md p-2 mt-2 md:mt-0">
+            <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M22 2L11 13" />
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M22 2L15 22L11 13L2 9L22 2Z" />
+            </svg>
+          </button>
+        </div>
+      </div>
     </main>
   </div>
 
@@ -86,41 +101,37 @@
         card.className = `bg-card border rounded-xl shadow-lg p-4 transition-transform hover:scale-105 ${selectedSetIndex === index ? 'border-green-500' : 'border-gray-700'}`;
 
         card.innerHTML = `
-          <h3 class="text-white font-semibold text-center mb-4">${set.name} </h3>
-          ${set.outlier ? `<p class="text-sm text-red-400 text-center mb-2">Outlier: ${set.outlier}</p>` : ''}
+          <h3 class="text-white font-semibold text-center mb-4">${set.name}</h3>
           <div class="overflow-x-auto">
-            <table class="w-full table-auto text-left text-white">
+            <table class="w-full table-auto text-left text-white border-collapse border border-gray-700">
               <thead>
-                <tr class="text-sm text-gray-400 border-b border-gray-700">
-                  <th class="py-2 px-4">Name</th>
-                  <th class="py-2 px-4 text-center">Score</th>
+                <tr class="text-sm text-gray-400 bg-gray-800 border-b border-gray-700">
+                  <th class="py-2 px-4 border-r border-gray-700">Name</th>
+                  <th class="py-2 px-4 text-center">Similarity Score</th> <!-- Changed from "Score" to "Similarity Score" -->
                 </tr>
               </thead>
               <tbody>
-                <tr>
-                  <td class="p-0" colspan="2">
-                    <table class="w-full">
-                      <tbody>
-                        ${set.employees.map((emp, i) => `
-                          <tr class="${emp.isOutlier ? 'bg-yellow-900/50' : 'bg-gray-800'}">
-                            <td class="py-3 px-4">${emp.name}</td>
-                            ${i === 0 ? `<td class="py-3 px-4 text-center align-middle" rowspan="${set.employees.length}">${set.score}%</td>` : ''}
-                          </tr>
-                        `).join('')}
-                      </tbody>
-                    </table>
-                  </td>
-                </tr>
+                ${set.employees.map((emp, i) => `
+                  <tr class="border-b border-gray-700 bg-gray-800">
+                    <td class="py-3 px-4 border-r border-gray-700">
+                      ${emp.name}
+                    </td>
+                    ${i === 0 ? `
+                      <td class="py-3 px-4 text-center align-middle ${emp.isOutlier ? 'bg-yellow-500 text-black' : 'bg-gray-800'}" rowspan="${set.employees.length}">
+                        ${emp.isOutlier ? 'Outlier Employee' : set.score + '%'}
+                      </td>
+                    ` : ''}
+                  </tr>
+                `).join('')}
               </tbody>
             </table>
           </div>
           <div class="flex justify-center mt-4">
-            <button class="select-btn w-full  bg-green-600 hover:bg-green-700 text-white py-2 px-8 rounded-lg"
-  onclick="selectSet(${index})"
-  ${selectedSetIndex !== null && selectedSetIndex !== index ? 'disabled class="opacity-50 cursor-not-allowed"' : ''}>
-  ${selectedSetIndex === index ? 'Set Selected' : 'Choose Set'}
-</button>
-
+            <button class="select-btn w-full bg-green-600 hover:bg-green-700 text-white py-2 px-8 rounded-lg"
+              onclick="selectSet(${index})"
+              ${selectedSetIndex !== null && selectedSetIndex !== index ? 'disabled class="opacity-50 cursor-not-allowed"' : ''}>
+              ${selectedSetIndex === index ? 'Set Selected' : 'Choose Set'}
+            </button>
           </div>
         `;
 
@@ -144,6 +155,32 @@
     }
 
     renderSets();
+
+    document.getElementById('chatSubmit')?.addEventListener('click', async function () {
+      const question = document.getElementById('chat_bot').value.trim();
+      const teamSize = 1; // change as needed
+
+      if (!question) return;
+
+      try {
+        const response = await fetch('/extract_skills', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ description: question, group_size: teamSize })
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.detail || "An error occurred");
+        }
+
+        const data = await response.json();
+        localStorage.setItem("suggestionResults", JSON.stringify(data.group_similarity_scores));
+        window.location.href = "/suggested";
+      } catch (err) {
+        alert("Error: " + err.message);
+      }
+    });
   </script>
 </body>
 </html>
