@@ -5,14 +5,19 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel
 from typing import List
-import requests
-import configparser
 import pandas as pd
+import os
 import itertools
+import configparser
+import chromadb
+from chromadb.config import Settings
+from sentence_transformers import SentenceTransformer
+import requests
+import uuid
 
 app = FastAPI()
 
-# CORS middleware for frontend API calls
+# CORS for frontend
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -21,7 +26,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Static and Templates Setup
+# Mount static and templates
 app.mount("/static", StaticFiles(directory="static"), name="static")
 templates = Jinja2Templates(directory="templates")
 
@@ -35,21 +40,50 @@ model_id = config.get('DEFAULT', 'MODEL_ID')
 # Load employee data
 employee_data = pd.read_csv('static/employees4.csv')
 
+# Setup ChromaDB
+chroma_client = chromadb.Client(Settings(
+    chroma_db_impl="duckdb+parquet",
+    persist_directory="./chroma"
+))
+collection_name = "employee_bios"
+if collection_name in [c.name for c in chroma_client.list_collections()]:
+    collection = chroma_client.get_collection(collection_name)
+else:
+    collection = chroma_client.create_collection(name=collection_name)
+
+# Load model
+embedder = SentenceTransformer("mixedbread-ai/mxbai-embed-large-v1")
+
+# Vectorize bios
+def vectorize_employees():
+    collection.delete(where={})
+    for idx, row in employee_data.iterrows():
+        name = row['Name']
+        bio = row['Bio']
+        embedding = embedder.encode(bio).tolist()
+        collection.add(
+            ids=[str(uuid.uuid4())],
+            embeddings=[embedding],
+            documents=[bio],
+            metadatas=[{"name": name}]
+        )
+
+vectorize_employees()
+
 class ProjectDescriptionRequest(BaseModel):
     description: str
     group_size: int = 2
 
 def get_iam_token(api_key: str) -> str:
-    api_key = api_key.strip()
     url = "https://iam.cloud.ibm.com/identity/token"
     headers = {'Content-Type': 'application/x-www-form-urlencoded'}
-    data = {'grant_type': 'urn:ibm:params:oauth:grant-type:apikey', 'apikey': api_key}
+    data = {'grant_type': 'urn:ibm:params:oauth:grant-type:apikey', 'apikey': api_key.strip()}
     response = requests.post(url, headers=headers, data=data)
     response.raise_for_status()
     return response.json()['access_token']
 
-def extract_skills(description: str, access_token: str) -> str:
-    url = f"https://us-south.ml.cloud.ibm.com/ml/v1/text/generation?version=2025-02-11"
+def extract_skills(description: str, access_token: str) -> List[str]:
+    url = "https://us-south.ml.cloud.ibm.com/ml/v1/text/generation?version=2025-02-11"
     headers = {
         'Authorization': f'Bearer {access_token}',
         'Content-Type': 'application/json',
@@ -70,50 +104,22 @@ def extract_skills(description: str, access_token: str) -> str:
     response.raise_for_status()
     result = response.json()
     skills_text = result['results'][0]['generated_text'].strip()
-    return skills_text
+    return [s.strip().lower() for s in skills_text.split(",") if s.strip()]
 
-def match_skills_to_employees(skills_list):
-    employee_matches = []
-    for _, row in employee_data.iterrows():
-        if int(row.get('Billability Hours', 1)) != 0:
-            continue
-        employee_skills = str(row['Skill']).split(',')
-        employee_skills = [skill.strip().lower() for skill in employee_skills]
-        match_count = sum(1 for skill in skills_list if skill.strip().lower() in employee_skills)
-        employee_matches.append((row['Name'], match_count))
-    employee_matches = sorted(employee_matches, key=lambda x: x[1], reverse=True)
-    matching_employees = [name for name, count in employee_matches if count > 0]
-    return matching_employees
+def match_employees(description: str) -> List[str]:
+    description_embedding = embedder.encode(description).tolist()
+    results = collection.query(query_embeddings=[description_embedding], n_results=10)
+    matched_names = [metadata['name'] for metadata in results['metadatas'][0]]
+    return matched_names
 
-def get_similarity_score(text1: str, text2: str, access_token: str) -> float:
-    url = f"https://us-south.ml.cloud.ibm.com/ml/v1/text/generation?version=2025-02-11"
-    headers = {
-        'Authorization': f'Bearer {access_token}',
-        'Content-Type': 'application/json',
-        'X-Project-Id': project_id
-    }
-    prompt = f"Calculate the semantic similarity score (0 to 1) between the following two texts:\nText 1: {text1}\nText 2: {text2}\nReturn only the numeric score."
-    payload = {
-        "input": prompt,
-        "model_id": model_id,
-        "project_id": project_id
-    }
-    response = requests.post(url, headers=headers, json=payload)
-    response.raise_for_status()
-    result = response.json()
-    generated_text = result['results'][0]['generated_text'].strip()
-    try:
-        similarity_score = float(generated_text)
-    except ValueError:
-        similarity_score = 0.0
-    return similarity_score
+def get_similarity_score(text1: str, text2: str) -> float:
+    emb1 = embedder.encode(text1)
+    emb2 = embedder.encode(text2)
+    return float(1 - (1 - (emb1 @ emb2) / (sum(x**2 for x in emb1)**0.5 * sum(x**2 for x in emb2)**0.5)))
 
 @app.get("/", response_class=HTMLResponse)
 async def login_page(request: Request):
     return templates.TemplateResponse("login.html", {"request": request})
-@app.get("/approved", response_class=HTMLResponse)
-async def login_page(request: Request):
-    return templates.TemplateResponse("approved.html", {"request": request})
 
 @app.get("/employee", response_class=HTMLResponse)
 async def employee_dashboard(request: Request):
@@ -127,24 +133,26 @@ async def manager_dashboard(request: Request):
 async def suggested_page(request: Request):
     return templates.TemplateResponse("suggested.html", {"request": request})
 
+@app.get("/approved", response_class=HTMLResponse)
+async def approved_page(request: Request):
+    return templates.TemplateResponse("approved.html", {"request": request})
+
 @app.post("/extract_skills")
 def extract_project_skills(request: ProjectDescriptionRequest):
     try:
         access_token = get_iam_token(api_key)
-        skills_text = extract_skills(request.description, access_token)
-        skills_list = [skill.strip() for skill in skills_text.split(',') if skill.strip()]
-        matched_employees = match_skills_to_employees(skills_list)[:6]
+        skills = extract_skills(request.description, access_token)
+        matched_employees = match_employees(" ".join(skills))[:6]
 
         group_size = min(request.group_size, len(matched_employees))
         group_similarity_scores = []
 
         for group in itertools.combinations(matched_employees, group_size):
-            pairwise = list(itertools.combinations(group, 2))
             similarities = []
-            for emp1, emp2 in pairwise:
+            for emp1, emp2 in itertools.combinations(group, 2):
                 bio1 = employee_data.loc[employee_data['Name'] == emp1, 'Bio'].values[0]
                 bio2 = employee_data.loc[employee_data['Name'] == emp2, 'Bio'].values[0]
-                similarity = get_similarity_score(bio1, bio2, access_token)
+                similarity = get_similarity_score(bio1, bio2)
                 similarities.append(similarity)
             avg_similarity = round(sum(similarities) / len(similarities), 2) if similarities else 0.0
             group_similarity_scores.append({
@@ -161,7 +169,7 @@ def extract_project_skills(request: ProjectDescriptionRequest):
             for emp1, emp2 in itertools.combinations(worst_group, 2):
                 bio1 = employee_data.loc[employee_data['Name'] == emp1, 'Bio'].values[0]
                 bio2 = employee_data.loc[employee_data['Name'] == emp2, 'Bio'].values[0]
-                score = get_similarity_score(bio1, bio2, access_token)
+                score = get_similarity_score(bio1, bio2)
                 pairwise_scores.append((emp1, emp2, score))
 
             emp_score_map = {}
@@ -174,14 +182,10 @@ def extract_project_skills(request: ProjectDescriptionRequest):
             top_groups[-1]["outlier_employee"] = outlier_employee
 
         return {
-            "extracted_skills": skills_list,
+            "extracted_skills": skills,
             "matched_employees": matched_employees,
             "group_similarity_scores": top_groups
         }
 
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
-
-if __name__ == "__main__":
-    import uvicorn
-    uvicorn.run("app:app", host="0.0.0.0", port=8000, reload=True)
