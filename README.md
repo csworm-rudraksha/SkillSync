@@ -32,3 +32,7 @@ SkillSync is a smart employee suggestion dashboard that helps project managers f
 | Data Store  | Local CSV + ChromaDB (DuckDB + Parquet)    |
 
 ---
+
+
+
+### Please add in your own API key and Project ID to make it functional.
