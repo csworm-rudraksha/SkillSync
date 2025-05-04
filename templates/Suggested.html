@@ -113,12 +113,12 @@
               <tbody>
                 ${set.employees.map((emp, i) => `
                   <tr class="border-b border-gray-700 bg-gray-800">
-                    <td class="py-3 px-4 border-r border-gray-700">
+                    <td class="py-3 px-4 border-r border-gray-700 ${emp.isOutlier ? 'text-yellow-400 font-semibold' : ''}">
                       ${emp.name}
                     </td>
                     ${i === 0 ? `
-                      <td class="py-3 px-4 text-center align-middle ${emp.isOutlier ? 'bg-yellow-500 text-black' : 'bg-gray-800'}" rowspan="${set.employees.length}">
-                        ${emp.isOutlier ? 'Outlier Employee' : set.score + '%'}
+                      <td class="py-3 px-4 text-center align-middle bg-gray-800 text-white" rowspan="${set.employees.length}">
+                        ${set.score + '%'}
                       </td>
                     ` : ''}
                   </tr>
@@ -165,10 +165,11 @@
       try {
         const response = await fetch('/extract_skills', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-cache' },
+          cache: 'no-store',
           body: JSON.stringify({ description: question, group_size: teamSize })
         });
-
+        
         if (!response.ok) {
           const errorData = await response.json();
           throw new Error(errorData.detail || "An error occurred");
